@@ -1,43 +1,42 @@
 use tonic::{transport::Server, Request, Response, Status};
+use hello::say_server::{Say, SayServer};
+use hello::{SayResponse, SayRequest};
 
-use payments::bitcoin_server::{Bitcoin, BitcoinServer};
-use payments::{BtcPaymentResponse, BtcPaymentRequest};
 
-pub mod payments {
-    tonic::include_proto!("payments");
+pub mod hello {
+    tonic::include_proto!("hello");
 }
 
-#[derive(Debug, Default)]
-pub struct BitcoinService {}
+// defining a struct for our service
+#[derive(Default)]
+pub struct MySay {}
+
+// implementing rpc for service defined in .proto
 
 #[tonic::async_trait]
-impl Bitcoin for BitcoinService {
-    async fn send_payment(
-        &self,
-        request: Request<BtcPaymentRequest>,
-    ) -> Result<Response<BtcPaymentResponse>, Status> {
+impl Say for MySay {
+// our rpc impelemented as function
+    async fn send(&self,request:Request<SayRequest>)->Result<Response<SayResponse>,Status>{
+
         println!("Got a request: {:?}", request);
-
-        let req = request.into_inner();
-
-        let reply = BtcPaymentResponse {
-            successful: true,
-            message: format!("Sent {}BTC to {}.", req.amount, req.to_addr).into(),
-        };
-
-        Ok(Response::new(reply))
+        
+        Ok(Response::new(SayResponse{
+             message:format!("hello friend {}",request.get_ref().name),
+        }))
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+// defining address for our service
     let addr = "[::1]:50051".parse()?;
-    let btc_service = BitcoinService::default();
-
+// creating a service
+    let say = MySay::default();
+    println!("Server listening on {}", addr);
+// adding our service to our server.
     Server::builder()
-        .add_service(BitcoinServer::new(btc_service))
+        .add_service(SayServer::new(say))
         .serve(addr)
         .await?;
-
     Ok(())
 }

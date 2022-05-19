@@ -1,25 +1,26 @@
-use payments::bitcoin_client::BitcoinClient;
-use payments::BtcPaymentRequest;
+use hello::say_client::SayClient;
+use hello::SayRequest;
 
-pub mod payments {
-    tonic::include_proto!("payments");
+pub mod hello {
+    tonic::include_proto!("hello");
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = BitcoinClient::connect("http://[::1]:50051").await?;
+
+    let channel = tonic::transport::Channel::from_static("http://[::1]:50051")
+    .connect()
+    .await?;
+
+    let mut client = SayClient::new(channel);
 
     let request = tonic::Request::new(
-        BtcPaymentRequest {
-            from_addr: "123456".to_owned(),
-            to_addr: "654321".to_owned(),
-            amount: 22
+        SayRequest {
+           name: "anshul".to_owned(),
         }
     );
 
-    let response = client.send_payment(request).await?;
-
+    let response = client.send(request).await?;
     println!("RESPONSE={:?}", response);
-
     Ok(())
 }
